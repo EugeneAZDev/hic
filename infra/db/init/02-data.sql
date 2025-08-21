@@ -1,0 +1,1 @@
+INSERT INTO users (email) VALUES ('admin@localhost') ON CONFLICT (email) DO NOTHING;

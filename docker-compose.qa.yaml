@@ -1,0 +1,51 @@
+services:
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    env_file:
+      - ./.env.${APP_ENV}
+    environment:
+      - NEXT_PUBLIC_API_URL
+      - APP_ENV
+    ports:
+      - "5001:3000" # Host:5001 => Container:3000
+    depends_on:
+      - backend
+
+  backend:
+    image: ${BACKEND_IMAGE}
+    ports:
+      - "7001:3001" # Host:7001 => Container:3001
+    environment:
+      - APP_ENV
+    env_file:
+      - ./.env.${APP_ENV}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  postgres:
+    image: postgres:15
+    environment:
+      APP_ENV: ${APP_ENV}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+    env_file:
+      - ./.env.${APP_ENV}
+    ports:
+      - "5435:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:

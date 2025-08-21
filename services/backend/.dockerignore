@@ -1,0 +1,80 @@
+*
+!/dist
+!/package.json
+!/package-lock.json
+
+# Environment configuration files (common source of secrets)
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+
+# SSH keys and certificates
+.ssh/
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.pfx
+*.jks
+*.keystore
+
+# Log files and temporary directories
+*.log
+logs/
+tmp/
+temp/
+cache/
+
+# Version control metadata
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node.js specific
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.yarn-cache/
+
+# Python specific
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build outputs and binaries
+dist/
+build/
+out/
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Docker files (avoid including Dockerfiles or .dockerignore in image)
+Dockerfile*
+.dockerignore
+
+# Configuration files that may contain secrets
+config/secrets.*
+secrets.json
+local.settings.json
