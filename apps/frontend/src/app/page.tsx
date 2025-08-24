@@ -1,12 +1,10 @@
-import { UserCard } from '../components/UserCard';
-import { User } from '@shared/types';
-const user: User = { id: '1', name: 'John Doe' };
+import { UsersList } from '../components/UsersList';
 
 export default function Home() {
   return (
     <main>
-      <h1>Test Page</h1>
-      <UserCard user={user} />
+      <h1>Тестовая страница</h1>
+      <UsersList />
     </main>
   );
 }

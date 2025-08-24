@@ -2,12 +2,12 @@ FROM node:18-alpine AS base
 WORKDIR /app
 
 FROM base AS runner
-ENV NODE_ENV=production
-EXPOSE 3001
+EXPOSE 7001
 
 USER root
 RUN npm install -g pnpm@8
 
+# Copy built application files
 COPY --chown=node:node services/backend/dist services/backend/dist
 COPY --chown=node:node services/backend/package.json services/backend/package.json
 COPY --chown=node:node pnpm-lock.yaml pnpm-lock.yaml

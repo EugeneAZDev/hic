@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Next.js 15 configuration
+  experimental: {
+    // Enable modern features
+    typedRoutes: true,
+  },
 };
 
 export default nextConfig;

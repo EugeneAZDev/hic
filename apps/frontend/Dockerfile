@@ -2,8 +2,7 @@ FROM node:18-alpine AS base
 WORKDIR /app
 
 FROM base AS runner
-ENV NODE_ENV=production
-EXPOSE 3000
+EXPOSE 5001
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -15,6 +14,7 @@ RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
+# Copy built application files
 COPY --chown=nextjs:nodejs apps/frontend/.next apps/frontend/.next
 COPY --chown=nextjs:nodejs apps/frontend/public apps/frontend/public
 COPY --chown=nextjs:nodejs apps/frontend/package.json apps/frontend/package.json

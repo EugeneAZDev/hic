@@ -1,67 +1,90 @@
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-    env_file:
-      - ./.env.${APP_ENV}
-    environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-      - APP_ENV=${APP_ENV}
-    ports:
-      - "5001:3000" # Host:5001 => Container:3000
-    depends_on:
-      - backend
 
-  backend:
-    build:
-      context: .
-      dockerfile: services/backend/Dockerfile
-    ports:
-      - "7001:3001" # Host:7001 => Container:3001
-    environment:
-      - APP_ENV=${APP_ENV}
-    env_file:
-      - ./.env.${APP_ENV}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health').on('response', (r) => { if (r.statusCode !== 200) throw new Error('not healthy') })"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 40s
-
-  postgres:
-    image: postgres:15
+  db:
+    image: postgres:13.3
+    restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     env_file:
       - ./.env.${APP_ENV}
     ports:
-      - "5435:5432"
+      - "${DB_PORT:-5435}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./infra/db/init:/docker-entrypoint-initdb.d
+    networks:
+      - network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # redis:
-  #   image: redis:7
-  #   ports:
-  #     - "6379:6379"
+  backend:
+    build:
+      context: .
+      dockerfile: ./services/backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-7001}:7001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    env_file:
+      - ./.env.${APP_ENV}
+      - ./.env.${APP_ENV}.backend
+    networks:
+      - network
+    depends_on:
+      db:
+        condition: service_healthy
 
-  # mosquitto:
-  #   image: eclipse-mosquitto:2
-  #   ports:
-  #     - "1883:1883"
-  #   volumes:
-  #     - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5001}:5001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    env_file:
+      - ./.env.${APP_ENV}
+      - ./.env.${APP_ENV}.frontend
+    networks:
+      - network
+    depends_on:
+      - backend
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+    env_file:
+      - ./.env.${APP_ENV}
+    volumes:
+      - ./nginx/cert:/var/www/cert
+      - ./nginx/cert/letsencrypt:/etc/letsencrypt
+    networks:
+      - network
+    depends_on:
+      - backend
+      - frontend
+
+networks:
+  network:
+    driver: bridge
 
 volumes:
   db_data:
+    # external: true # if volume is already exists

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/config.sh"
+source "$SCRIPT_DIR/config/server.conf"
+echo $IP
 DATE=$(date +"%d_%m_%Y_%H_%M")
 TARGET_PATH="/run/media/eulw/HDD1863/Backups/hic_history/${PROJECT_NAME}_$DATE"
 cd "$PROJECT_PATH"

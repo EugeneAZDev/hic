@@ -4,6 +4,7 @@ package-lock.json
 yarn.lock
 npm-shrinkwrap.json
 !pnpm-lock.yaml
+node_modules
 
 # Editor: Cursor
 .cursor/
@@ -13,3 +14,8 @@ npm-shrinkwrap.json
 .turbo/
 
 PROMPTS.md
+
+/scripts/config/*.conf
+!/scripts/config/server.conf.example
+
+/outdated

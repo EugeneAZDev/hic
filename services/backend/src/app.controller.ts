@@ -6,9 +6,4 @@ export class AppController {
   health() {
     return { status: 'ok', message: 'Backend is running!' };
   }
-
-  @Get('hello')
-  hello() {
-    return { message: 'Hello from Nest.js!' };
-  }
 }
