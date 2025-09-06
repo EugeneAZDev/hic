@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noEmit": false,
+    "paths": {
+      "@hic/shared-dto": ["../../packages/shared/dto/src"],
+      "@hic/shared-schemas": ["../../packages/shared/schemas/src"],
+      "@hic/shared-security": ["../../packages/shared/security/src"]
+    }
+  },
+  "include": ["src"]
+}
