@@ -1,0 +1,21 @@
+{
+  "name": "@hic/shared-dto",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@nestjs/swagger": "^11.2.0",
+    "zod": "^3.22.4",
+    "@hic/shared-schemas": "workspace:*",
+    "@anatine/zod-openapi": "^2.2.8"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
