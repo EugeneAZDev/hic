@@ -1,0 +1,27 @@
+{
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache"]
+    },
+    "lint": {
+      "dependsOn": [],
+      "inputs": ["src/**", "test/**", "eslint.config.mjs"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "dev": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": true,
+      "env": ["PORT"]
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "format": {}
+  }
+}
