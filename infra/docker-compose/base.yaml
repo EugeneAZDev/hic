@@ -1,0 +1,95 @@
+services:
+
+  db:
+    container_name: hic-db-basic
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    profiles:
+      - local
+      - dev
+      - qa
+      - staging
+      - prod
+    ports:
+      - "${DB_PORT:-5435}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - hicnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-db:
+    container_name: hic-auth-db-basic
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_DB_NAME}
+    profiles:
+      - local
+      - dev
+      - qa
+      - staging
+      - prod
+    ports:
+      - "${AUTH_DB_PORT:-5437}:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - hicnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: hic-redis-basic
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - hicnet
+    profiles:
+      - local
+      - dev
+      - qa
+      - staging
+      - prod
+
+  mailhog:
+    container_name: hic-mailhog-basic
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - hicnet
+    profiles:
+      - local
+      - dev
+    
+volumes:
+  db_data:
+    name: hic-db-data
+    external: true
+  auth_db_data:
+    name: hic-auth-db-data
+    external: true
+
+networks:
+  hicnet:
+    driver: bridge

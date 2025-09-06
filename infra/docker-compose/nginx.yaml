@@ -1,0 +1,25 @@
+services:
+  nginx:
+    container_name: hic-nginx-dev
+    build:
+      context: ../nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    profiles:
+      - dev
+      - qa
+      - staging
+      - prod
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ../nginx/conf:/etc/nginx/conf.d
+      - ../nginx/ssl:/etc/ssl
+    networks:
+      - hicnet
+    depends_on:
+    - bff
+    - auth-service
+    - backend
+    - frontend
