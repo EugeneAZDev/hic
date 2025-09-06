@@ -1,0 +1,31 @@
+{
+  "name": "@hic/bff",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main",
+    "dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@hic/shared-dto": "workspace:^",
+    "@hic/shared-schemas": "workspace:^",
+    "@hic/shared-security": "workspace:^",
+    "@nestjs/axios": "^4.0.0",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-fastify": "^11.1.6",
+    "@nestjs/swagger": "^11.2.0",
+    "axios": "^1.6.0",
+    "fastify": "^4.0.0",
+    "rxjs": "^7.8.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "@nestjs/schematics": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}
