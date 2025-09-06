@@ -1,0 +1,65 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/auth"
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_AUTH")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL_AUTH")
+}
+
+model UserAuth {
+  id                 String   @id @default(uuid()) @db.Uuid
+  email              String   @unique
+  emailVerified      Boolean  @default(false)
+  passwordHash       String?
+  provider           String   @default("local")
+  providerSubject    String?
+  mfaEnabled         Boolean  @default(false)
+  mfaSecretEnc       String?
+  refreshTokenFamily String   @unique
+  refreshTokenExp    DateTime @db.Timestamptz(6)
+  lockedUntil        DateTime? @db.Timestamptz(6)
+  lastLoginAt        DateTime @default(now()) @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([provider, providerSubject])
+
+  sessions Session[]
+  tokens   Token[]
+  mfa      Mfa[]
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      UserAuth @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model Token {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      UserAuth @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  token     String   @unique
+  expiresAt DateTime @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model Mfa {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      UserAuth @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  secret    String
+  backupCodes String[]
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+}
