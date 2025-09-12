@@ -1,9 +1,10 @@
+include:
+  - networks.yaml
+
 services:
   nginx:
-    container_name: hic-nginx-dev
-    build:
-      context: ../nginx
-      dockerfile: Dockerfile
+    container_name: hic-nginx-${APP_ENV:-dev}
+    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/nginx:${VERSION:-staging-latest}
     restart: unless-stopped
     profiles:
       - dev
@@ -11,11 +12,15 @@ services:
       - staging
       - prod
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "${NGINX_HTTP_PORT:-8080}:80"
+      - "${NGINX_HTTPS_PORT:-8443}:443"
+    environment:
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+      - DOMAIN=${DOMAIN:-localhost}
     volumes:
       - ../nginx/conf:/etc/nginx/conf.d
-      - ../nginx/ssl:/etc/ssl
+      - ../nginx/ssl:/etc/letsencrypt
+      - ../nginx/cert:/var/www/cert
     networks:
       - hicnet
     depends_on:
@@ -23,3 +28,9 @@ services:
     - auth-service
     - backend
     - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M

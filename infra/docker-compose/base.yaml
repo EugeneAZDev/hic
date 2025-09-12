@@ -1,3 +1,6 @@
+include:
+  - networks.yaml
+
 services:
 
   db:
@@ -90,6 +93,3 @@ volumes:
     name: hic-auth-db-data
     external: true
 
-networks:
-  hicnet:
-    driver: bridge

@@ -21,6 +21,13 @@ server {
         allow all;
     }
 
+    # Avoid 404 noise for missing favicon
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+        return 204;
+    }
+
     location /bff/auth/ {
         limit_req zone=api burst=20 nodelay;
 

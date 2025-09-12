@@ -57,3 +57,7 @@ Thumbs.db
 
 # Prompts
 PROMPTS.md
+
+# SSL Certificates
+infra/nginx/ssl/
+infra/nginx/cert/

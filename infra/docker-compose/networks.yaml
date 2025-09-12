@@ -1,0 +1,3 @@
+networks:
+  hicnet:
+    driver: bridge

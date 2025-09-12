@@ -1,0 +1,137 @@
+name: Build & Test PR
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up build artifacts
+        run: |
+          rm -rf .turbo || true
+          rm -rf node_modules/.cache || true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm run lint
+
+      - name: Run type checking
+        run: pnpm run type-check
+
+      - name: Run tests
+        run: pnpm run test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Build applications
+        run: |
+          export NEXT_PUBLIC_BFF_URL=http://localhost:3010/bff
+          export NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3012/api/auth
+          pnpm build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase repository name
+        run: |
+          echo "REPO_OWNER_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REPO_NAME_LOWER=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build and push images
+        uses: docker/bake-action@v5
+        with:
+          push: true
+          files: |
+            ./docker-bake.hcl
+          set: |
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:pr-${{ github.event.number }}-${{ github.sha }}
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:pr-${{ github.event.number }}-${{ github.sha }}
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:pr-${{ github.event.number }}-${{ github.sha }}
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:pr-${{ github.event.number }}-${{ github.sha }}
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}
+
+      - name: Comment PR with image tags
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const images = [
+              '${{ env.IMAGE_PREFIX }}/frontend:pr-${{ github.event.number }}-${{ github.sha }}',
+              '${{ env.IMAGE_PREFIX }}/backend:pr-${{ github.event.number }}-${{ github.sha }}',
+              '${{ env.IMAGE_PREFIX }}/bff:pr-${{ github.event.number }}-${{ github.sha }}',
+              '${{ env.IMAGE_PREFIX }}/auth-service:pr-${{ github.event.number }}-${{ github.sha }}',
+              '${{ env.IMAGE_PREFIX }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}'
+            ];
+            
+            const comment = `## Docker Images Built Successfully
+            
+            The following Docker images have been built and pushed to GHCR:
+            
+            ${images.map(img => `- \`${img}\``).join('\n')}
+            
+            You can use these images for testing your PR.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+
+
+

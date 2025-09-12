@@ -1,0 +1,198 @@
+name: Update Staging
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Build applications
+        run: |
+          export NEXT_PUBLIC_BFF_URL=http://localhost:3015/bff
+          export NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3014/api/auth
+          pnpm build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase repository name
+        run: |
+          echo "REPO_OWNER_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REPO_NAME_LOWER=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build & push staging images
+        uses: docker/bake-action@v5
+        with:
+          push: true
+          files: ./docker-bake.hcl
+          set: |
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
+        env:
+          # Provide dummy values for build-time variables
+          JWT_SECRET: "dummy-build-secret"
+          DB_USER: "dummy"
+          DB_PASSWORD: "dummy"
+          DB_NAME: "dummy"
+          AUTH_DB_USER: "dummy"
+          AUTH_DB_PASSWORD: "dummy"
+          AUTH_DB_NAME: "dummy"
+          FRONTEND_URL: "http://localhost:3001"
+          NEXT_PUBLIC_BFF_URL: "http://localhost:3015/bff"
+          DOMAIN: "localhost"
+          SSL_ENABLED: "false"
+          REGISTRY_URL: "ghcr.io/dummy"
+          VERSION: "staging-latest"
+
+  deploy:
+    needs: build-push
+    runs-on: [self-hosted, staging, production]
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up before deploy
+        run: |
+          # Clean up build artifacts
+          rm -rf .turbo || true
+          rm -rf node_modules/.cache || true
+          
+          # Stop and remove existing containers
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         down --remove-orphans || true
+          
+          # Stop system web servers that might be using port 80
+          sudo systemctl stop nginx || true
+          sudo systemctl stop apache2 || true
+          sudo systemctl stop httpd || true
+          
+          RUNNER_USER="runner"
+
+          for port in 80 443 5001 3013 3014 3015 3001; do
+            sudo lsof -ti:$port -sTCP:LISTEN 2>/dev/null | while read -r pid; do
+              user=$(ps -o user= -p "$pid" 2>/dev/null || true)
+              if [[ -n $pid && $user != "$RUNNER_USER" ]]; then
+                echo "Killing $pid (user=$user) on port $port"
+                sudo kill -9 "$pid" 2>/dev/null || true
+              fi
+            done
+          done
+          
+          # Remove all nginx containers and images
+          docker rm -f $(docker ps -aq --filter "name=nginx") || true
+          docker rmi $(docker images -q --filter "reference=*nginx*") || true
+          
+          # Clean up Docker resources
+          docker system prune -af
+          
+          # Wait a moment for ports to be released
+          sleep 10
+          
+          # Verify ports are free
+          echo "Checking if ports are free:"
+          sudo ss -tlnp | grep -E "(80|443|5001|3013|3014|3015|3001)" || echo "All ports are free"
+
+      - name: Deploy to staging
+        run: |
+          # Set environment variables for staging
+          export REGISTRY_URL=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          export VERSION=staging-latest
+          
+          # Create staging env file from variables and secrets
+          echo "Creating .env file with staging variables..."
+          cat > /opt/actions-runner/_work/hic/hic/.env << EOF
+          APP_ENV=${{ vars.STAGING_APP_ENV || 'staging' }}
+          REGISTRY_URL=${{ vars.STAGING_REGISTRY_URL || 'ghcr.io/eugeneazdev/hic' }}
+          VERSION=${{ vars.STAGING_VERSION || 'staging-latest' }}
+          DB_NAME=${{ vars.STAGING_DB_NAME || 'hic_staging' }}
+          DB_USER=${{ vars.STAGING_DB_USER || 'hic_user' }}
+          DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD || 'dummy_password' }}
+          AUTH_DB_NAME=${{ vars.STAGING_AUTH_DB_NAME || 'hic_auth_staging' }}
+          AUTH_DB_USER=${{ vars.STAGING_AUTH_DB_USER || 'hic_auth_user' }}
+          AUTH_DB_PASSWORD=${{ secrets.STAGING_AUTH_DB_PASSWORD || 'dummy_auth_password' }}
+          JWT_SECRET=${{ secrets.STAGING_JWT_SECRET || 'dummy_jwt_secret_for_staging' }}
+          FRONTEND_URL=${{ vars.STAGING_FRONTEND_URL || 'http://localhost:3001' }}
+          NEXT_PUBLIC_BFF_URL=${{ vars.STAGING_NEXT_PUBLIC_BFF_URL || 'http://localhost:3015/bff' }}
+          DOMAIN=${{ vars.STAGING_DOMAIN || 'hic-staging' }}
+          SSL_ENABLED=${{ vars.STAGING_SSL_ENABLED || 'false' }}
+          NGINX_HTTP_PORT=80
+          NGINX_HTTPS_PORT=443
+          EOF
+          
+          # Debug: Show .env file content (without secrets)
+          echo "Created .env file:"
+          cat /opt/actions-runner/_work/hic/hic/.env | sed 's/PASSWORD=.*/PASSWORD=***/' | sed 's/SECRET=.*/SECRET=***/'
+          
+          # Pull latest images (including nginx from registry)
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         pull
+          
+          # Deploy services
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         up -d --remove-orphans
+
+      - name: Health check
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Check if services are running
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         ps
+
+
+
+
