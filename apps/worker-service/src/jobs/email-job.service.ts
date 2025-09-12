@@ -1,48 +1,49 @@
-import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-import { QUEUES } from './queue.constants';
-import { 
-  WelcomeEmailJob, 
-  PasswordResetEmailJob, 
+import { Injectable } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
+import { QUEUES } from "./queue.constants";
+import {
+  WelcomeEmailJob,
+  PasswordResetEmailJob,
   CustomEmailJob,
-  QueueStats 
-} from '@hic/shared-dto';
+  QueueStats,
+} from "@hic/shared-dto";
 
 @Injectable()
 export class EmailJobService {
-  constructor(
-    @InjectQueue(QUEUES.EMAIL) private emailQueue: Queue,
-  ) {}
+  constructor(@InjectQueue(QUEUES.EMAIL) private emailQueue: Queue) {}
 
   async addWelcomeEmailJob(data: WelcomeEmailJob, delay = 0): Promise<void> {
-    await this.emailQueue.add('welcome-email', data, {
+    await this.emailQueue.add("welcome-email", data, {
       delay,
       attempts: 3,
       backoff: {
-        type: 'exponential',
+        type: "exponential",
         delay: 2000,
       },
     });
   }
 
-  async addPasswordResetEmailJob(data: PasswordResetEmailJob, delay = 0): Promise<void> {
-    await this.emailQueue.add('password-reset-email', data, {
+  async addPasswordResetEmailJob(
+    data: PasswordResetEmailJob,
+    delay = 0,
+  ): Promise<void> {
+    await this.emailQueue.add("password-reset-email", data, {
       delay,
       attempts: 3,
       backoff: {
-        type: 'exponential',
+        type: "exponential",
         delay: 2000,
       },
     });
   }
 
   async addCustomEmailJob(data: CustomEmailJob, delay = 0): Promise<void> {
-    await this.emailQueue.add('custom-email', data, {
+    await this.emailQueue.add("custom-email", data, {
       delay,
       attempts: 3,
       backoff: {
-        type: 'exponential',
+        type: "exponential",
         delay: 2000,
       },
     });
@@ -69,11 +70,11 @@ export class EmailJobService {
   }
 
   async clearCompletedJobs(): Promise<void> {
-    await this.emailQueue.clean(0, 'completed');
+    await this.emailQueue.clean(0, "completed");
   }
 
   async clearFailedJobs(): Promise<void> {
-    await this.emailQueue.clean(0, 'failed');
+    await this.emailQueue.clean(0, "failed");
   }
 
   async pauseQueue(): Promise<void> {

@@ -1,5 +1,9 @@
-import { createParamDecorator, ExecutionContext, BadRequestException } from '@nestjs/common';
-import { ZodSchema } from 'zod';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  BadRequestException,
+} from "@nestjs/common";
+import { ZodSchema } from "zod";
 
 export const ZodBody = (schema: ZodSchema) =>
   createParamDecorator((data: unknown, ctx: ExecutionContext) => {
@@ -9,9 +13,9 @@ export const ZodBody = (schema: ZodSchema) =>
     try {
       return schema.parse(body);
     } catch (error) {
-      throw new BadRequestException('Validation failed', {
+      throw new BadRequestException("Validation failed", {
         cause: error,
-        description: 'Request body validation failed',
+        description: "Request body validation failed",
       });
     }
   })();
