@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
-import { CreateUserJob } from '@hic/shared-dto';
+import { Injectable, Logger } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { ConfigService } from "@nestjs/config";
+import { firstValueFrom } from "rxjs";
+import { CreateUserJob } from "@hic/shared-dto";
 
 @Injectable()
 export class BackendService {
@@ -13,7 +13,8 @@ export class BackendService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:3011';
+    this.backendUrl =
+      this.configService.get<string>("BACKEND_URL") || "http://localhost:3011";
   }
 
   async createUser(userData: CreateUserJob): Promise<void> {
@@ -28,10 +29,10 @@ export class BackendService {
           },
           {
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
-          }
-        )
+          },
+        ),
       );
 
       if (response.status !== 201) {
@@ -40,7 +41,10 @@ export class BackendService {
 
       this.logger.log(`User ${userData.email} created successfully in backend`);
     } catch (error) {
-      this.logger.error(`Failed to create user ${userData.email} in backend:`, error);
+      this.logger.error(
+        `Failed to create user ${userData.email} in backend:`,
+        error,
+      );
       throw error;
     }
   }

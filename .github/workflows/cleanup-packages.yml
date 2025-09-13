@@ -1,0 +1,65 @@
+name: Cleanup Old Packages
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup old PR images
+        run: |
+          echo "Cleaning up old PR images (older than 7 days)..."
+          gh api repos/${{ github.repository }}/packages --jq '.[] | select(.name | contains("hic") and (.name | contains("pr-"))) | .id' | while read pkg_id; do
+            echo "Checking package $pkg_id for cleanup..."
+            # Get package versions older than 7 days
+            gh api repos/${{ github.repository }}/packages/$pkg_id/versions --jq '.[] | select(.created_at | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime < (now - 7*24*3600)) | .id' | while read version_id; do
+              echo "🗑️ Deleting old PR version $version_id"
+              gh api repos/${{ github.repository }}/packages/$pkg_id/versions/$version_id -X DELETE || true
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup old staging images
+        run: |
+          echo "Cleaning up old staging images (keeping last 10 versions)..."
+          gh api repos/${{ github.repository }}/packages --jq '.[] | select(.name | contains("hic") and (.name | contains("staging"))) | .id' | while read pkg_id; do
+            echo "Checking staging package $pkg_id for cleanup..."
+            # Get all versions sorted by creation date (newest first)
+            gh api repos/${{ github.repository }}/packages/$pkg_id/versions --jq 'sort_by(.created_at) | reverse | .[10:] | .[].id' | while read version_id; do
+              echo "Deleting old staging version $version_id"
+              gh api repos/${{ github.repository }}/packages/$pkg_id/versions/$version_id -X DELETE || true
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup old main images
+        run: |
+          echo "Cleaning up old main images (keeping last 20 versions)..."
+          gh api repos/${{ github.repository }}/packages --jq '.[] | select(.name | contains("hic") and (.name | contains("main") or .name | contains("latest"))) | .id' | while read pkg_id; do
+            echo "Checking main package $pkg_id for cleanup..."
+            # Get all versions sorted by creation date (newest first)
+            gh api repos/${{ github.repository }}/packages/$pkg_id/versions --jq 'sort_by(.created_at) | reverse | .[20:] | .[].id' | while read version_id; do
+              echo "Deleting old main version $version_id"
+              gh api repos/${{ github.repository }}/packages/$pkg_id/versions/$version_id -X DELETE || true
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "Package cleanup completed!"
+          echo "Cleanup policy:"
+          echo "  - PR images: older than 7 days"
+          echo "  - Staging images: keep last 10 versions"
+          echo "  - Main images: keep last 20 versions"

@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { JobStatus } from '../../../../packages/prisma/generated/main';
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { JobStatus } from "../../../../packages/prisma/generated/main";
 
 export interface JobHistoryCreate {
   queueName: string;
@@ -36,7 +36,7 @@ export class JobHistoryService {
       });
       return jobRecord.id;
     } catch (error) {
-      this.logger.error('Failed to create job history record:', error);
+      this.logger.error("Failed to create job history record:", error);
       throw error;
     }
   }
@@ -58,7 +58,7 @@ export class JobHistoryService {
     jobType?: string,
     status?: JobStatus,
     limit = 50,
-    offset = 0
+    offset = 0,
   ) {
     try {
       const where: any = {};
@@ -68,12 +68,12 @@ export class JobHistoryService {
 
       return await this.prisma.jobHistory.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       });
     } catch (error) {
-      this.logger.error('Failed to get job history:', error);
+      this.logger.error("Failed to get job history:", error);
       throw error;
     }
   }
@@ -84,7 +84,7 @@ export class JobHistoryService {
       if (queueName) where.queueName = queueName;
 
       const stats = await this.prisma.jobHistory.groupBy({
-        by: ['status'],
+        by: ["status"],
         where,
         _count: {
           status: true,
@@ -100,13 +100,13 @@ export class JobHistoryService {
         STALLED: 0,
       };
 
-      stats.forEach(stat => {
+      stats.forEach((stat) => {
         result[stat.status] = stat._count.status;
       });
 
       return result;
     } catch (error) {
-      this.logger.error('Failed to get job stats:', error);
+      this.logger.error("Failed to get job stats:", error);
       throw error;
     }
   }

@@ -61,12 +61,12 @@ jobs:
           push: true
           files: ./docker-bake.hcl
           set: |
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
+            frontend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
+            backend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
+            bff.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
+            auth-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
+            worker-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
+            nginx.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
         env:
           # Provide dummy values for build-time variables
           JWT_SECRET: "dummy-build-secret"
