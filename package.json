@@ -9,6 +9,7 @@
     "dev:worker-service": "turbo run dev --filter=@hic/worker-service",
     "lint": "turbo run lint",
     "format": "turbo run format",
+    "type-check": "turbo run type-check",
     "prisma:generate": "pnpm --filter=@hic/prisma-main run db:generate && pnpm --filter=@hic/prisma-auth run db:generate"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@
     "prod": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
     "generate": "nest generate",
     "test": "jest",
     "test:watch": "jest --watch",

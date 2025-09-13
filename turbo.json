@@ -22,6 +22,10 @@
       "dependsOn": ["build"],
       "outputs": []
     },
-    "format": {}
+    "format": {},
+    "type-check": {
+      "dependsOn": [],
+      "inputs": ["src/**", "tsconfig.json"]
+    }
   }
 }
