@@ -10,7 +10,7 @@ APP_MODE=dev
 echo "APP_MODE: $APP_MODE"
 
 ENV_FILE="$PROJECT_ROOT/.env-files/.env.${APP_MODE}"
-[[ -f "$ENV_FILE" ]] || { echo "❌ $ENV_FILE not found!"; exit 1; }
+[[ -f "$ENV_FILE" ]] || { echo "$ENV_FILE not found!"; exit 1; }
 
 docker-compose \
   -f "$PROJECT_ROOT/infra/docker-compose/base.yaml" \

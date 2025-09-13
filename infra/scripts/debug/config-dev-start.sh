@@ -13,7 +13,7 @@ echo APP_MODE: $APP_MODE
 echo "$PROJECT_ROOT"
 
 ENV_FILE="$PROJECT_ROOT/.env-files/.env.${APP_MODE}"
-[[ -f "$ENV_FILE" ]] || { echo "❌ $ENV_FILE not found!"; exit 1; }
+[[ -f "$ENV_FILE" ]] || { echo "$ENV_FILE not found!"; exit 1; }
 
 echo "Using services:"
 

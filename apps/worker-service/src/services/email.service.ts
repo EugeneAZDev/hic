@@ -83,7 +83,7 @@ export class EmailService {
       }
 
       this.logger.log("=".repeat(80));
-      this.logger.log("✅ Email logged successfully (Development Mode)");
+      this.logger.log("Email logged successfully (Development Mode)");
       this.logger.log("=".repeat(80));
       return;
     }

@@ -9,7 +9,7 @@ cd "$PROJECT_ROOT"
 source "$PROJECT_ROOT/infra/config/networking.conf"
 
 ENV_FILE="$PROJECT_ROOT/.env-files/.env.${APP_MODE}"
-[[ -f "$ENV_FILE" ]] || { echo "❌ $ENV_FILE not found!"; exit 1; }
+[[ -f "$ENV_FILE" ]] || { echo "$ENV_FILE not found!"; exit 1; }
 
 # Create external volumes if they don't exist
 echo "Creating external volumes if they don't exist..."

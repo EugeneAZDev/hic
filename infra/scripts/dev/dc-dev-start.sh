@@ -12,7 +12,7 @@ APP_MODE=dev
 echo "APP_MODE: $APP_MODE"
 
 ENV_FILE="$PROJECT_ROOT/.env-files/.env.${APP_MODE}"
-[[ -f "$ENV_FILE" ]] || { echo "❌ $ENV_FILE not found!"; exit 1; }
+[[ -f "$ENV_FILE" ]] || { echo "$ENV_FILE not found!"; exit 1; }
 
 # Load environment variables for frontend build
 echo "Loading environment variables from $ENV_FILE"

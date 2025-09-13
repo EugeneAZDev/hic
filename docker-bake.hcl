@@ -5,9 +5,7 @@ group "default" {
 target "frontend" {
   context = "."
   dockerfile = "apps/frontend/Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/frontend:staging-latest"
-  ]
+  tags = []
   args = {
     NODE_ENV = "production"
   }
@@ -16,9 +14,7 @@ target "frontend" {
 target "backend" {
   context = "."
   dockerfile = "apps/backend/Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/backend:staging-latest"
-  ]
+  tags = []
   args = {
     NODE_ENV = "production"
   }
@@ -27,9 +23,7 @@ target "backend" {
 target "bff" {
   context = "."
   dockerfile = "apps/bff/Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/bff:staging-latest"
-  ]
+  tags = []
   args = {
     NODE_ENV = "production"
   }
@@ -38,9 +32,7 @@ target "bff" {
 target "auth-service" {
   context = "."
   dockerfile = "apps/auth-service/Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/auth-service:staging-latest"
-  ]
+  tags = []
   args = {
     NODE_ENV = "production"
   }
@@ -49,9 +41,7 @@ target "auth-service" {
 target "worker-service" {
   context = "."
   dockerfile = "apps/worker-service/Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/worker-service:staging-latest"
-  ]
+  tags = []
   args = {
     NODE_ENV = "production"
   }
@@ -60,9 +50,7 @@ target "worker-service" {
 target "nginx" {
   context = "infra/nginx"
   dockerfile = "Dockerfile"
-  tags = [
-    "ghcr.io/eugeneazdev/hic/nginx:staging-latest"
-  ]
+  tags = []
 }
 
 
