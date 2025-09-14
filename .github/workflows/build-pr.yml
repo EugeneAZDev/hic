@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
 env:
   REGISTRY: ghcr.io
 
@@ -34,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared packages
+        run: pnpm run build --filter="@hic/shared-*"
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
       - name: Run linting
         run: pnpm run lint
 
@@ -46,9 +57,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,11 +107,12 @@ jobs:
           files: |
             ./docker-bake.hcl
           set: |
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:pr-${{ github.event.number }}-${{ github.sha }}
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:pr-${{ github.event.number }}-${{ github.sha }}
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:pr-${{ github.event.number }}-${{ github.sha }}
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:pr-${{ github.event.number }}-${{ github.sha }}
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}
+            frontend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:pr-${{ github.event.number }}-${{ github.sha }}
+            backend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:pr-${{ github.event.number }}-${{ github.sha }}
+            bff.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:pr-${{ github.event.number }}-${{ github.sha }}
+            auth-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:pr-${{ github.event.number }}-${{ github.sha }}
+            worker-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}
+            nginx.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:pr-${{ github.event.number }}-${{ github.sha }}
 
       - name: Comment PR with image tags
         uses: actions/github-script@v7
@@ -114,7 +123,8 @@ jobs:
               '${{ env.IMAGE_PREFIX }}/backend:pr-${{ github.event.number }}-${{ github.sha }}',
               '${{ env.IMAGE_PREFIX }}/bff:pr-${{ github.event.number }}-${{ github.sha }}',
               '${{ env.IMAGE_PREFIX }}/auth-service:pr-${{ github.event.number }}-${{ github.sha }}',
-              '${{ env.IMAGE_PREFIX }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}'
+              '${{ env.IMAGE_PREFIX }}/worker-service:pr-${{ github.event.number }}-${{ github.sha }}',
+              '${{ env.IMAGE_PREFIX }}/nginx:pr-${{ github.event.number }}-${{ github.sha }}'
             ];
             
             const comment = `## Docker Images Built Successfully
@@ -132,6 +142,25 @@ jobs:
               body: comment
             });
 
-
-
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Cleanup old PR images
+        run: |
+          # Get all PR images older than 7 days
+          gh api repos/${{ github.repository }}/packages --jq '.[] | select(.name | contains("hic") and (.name | contains("pr-"))) | .id' | while read pkg_id; do
+            echo "Checking package $pkg_id for cleanup..."
+            # Get package versions older than 7 days
+            gh api repos/${{ github.repository }}/packages/$pkg_id/versions --jq '.[] | select(.created_at | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime < (now - 7*24*3600)) | .id' | while read version_id; do
+              echo "Deleting old version $version_id"
+              gh api repos/${{ github.repository }}/packages/$pkg_id/versions/$version_id -X DELETE || true
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

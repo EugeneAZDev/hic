@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
-import { Login, Register, AuthResponse, PublicUser } from '@hic/shared-dto';
+import { Injectable } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { ConfigService } from "@nestjs/config";
+import { firstValueFrom } from "rxjs";
+import { Login, Register, AuthResponse, PublicUser } from "@hic/shared-dto";
 
 @Injectable()
 export class AuthBffService {
@@ -12,7 +12,9 @@ export class AuthBffService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.authServiceUrl = this.configService.get<string>('AUTH_SERVICE_URL') || 'http://localhost:3012/api/auth';
+    this.authServiceUrl =
+      this.configService.get<string>("AUTH_SERVICE_URL") ||
+      "http://localhost:3012/api/auth";
   }
 
   async register(registerDto: Register): Promise<AuthResponse> {
@@ -23,10 +25,10 @@ export class AuthBffService {
           registerDto,
           {
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
-          }
-        )
+          },
+        ),
       );
       return response.data;
     } catch (error) {
@@ -34,15 +36,15 @@ export class AuthBffService {
         // Forward the error response from auth-service with proper status code
         const statusCode = error.response.status;
         const errorData = error.response.data;
-        
+
         // Create a proper HTTP exception with the same status code
-        const HttpException = require('@nestjs/common').HttpException;
+        const { HttpException } = await import("@nestjs/common");
         throw new HttpException(
-          errorData || { message: 'Registration failed' },
-          statusCode
+          errorData || { message: "Registration failed" },
+          statusCode,
         );
       }
-      throw new Error('Failed to register user');
+      throw new Error("Failed to register user");
     }
   }
 
@@ -54,10 +56,10 @@ export class AuthBffService {
           loginDto,
           {
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
-          }
-        )
+          },
+        ),
       );
       return response.data;
     } catch (error) {
@@ -65,15 +67,15 @@ export class AuthBffService {
         // Forward the error response from auth-service with proper status code
         const statusCode = error.response.status;
         const errorData = error.response.data;
-        
+
         // Create a proper HTTP exception with the same status code
-        const HttpException = require('@nestjs/common').HttpException;
+        const { HttpException } = await import("@nestjs/common");
         throw new HttpException(
-          errorData || { message: 'Authentication failed' },
-          statusCode
+          errorData || { message: "Authentication failed" },
+          statusCode,
         );
       }
-      throw new Error('Failed to login user');
+      throw new Error("Failed to login user");
     }
   }
 
@@ -81,7 +83,7 @@ export class AuthBffService {
     // Since we're using stateless JWT tokens, logout is handled on the client side
     // by removing the token from storage. This endpoint is mainly for consistency
     // and potential future server-side token blacklisting.
-    return { message: 'Logout successful' };
+    return { message: "Logout successful" };
   }
 
   async getProfile(user: any): Promise<PublicUser> {

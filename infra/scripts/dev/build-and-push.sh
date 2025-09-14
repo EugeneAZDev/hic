@@ -46,7 +46,7 @@ if [[ -f "$ENV_FILE" ]]; then
     # Restore original NODE_ENV to avoid conflicts
     export NODE_ENV="$ORIGINAL_NODE_ENV"
 else
-    echo "❌ Environment file $ENV_FILE not found!"
+    echo "Environment file $ENV_FILE not found!"
     exit 1
 fi
 
@@ -128,7 +128,7 @@ if [ "$START_SERVICES" = "true" ]; then
         up --build -d --remove-orphans
     
     echo ""
-    echo "✅ Services started successfully!"
+    echo "Services started successfully!"
     echo "Auth:       http://localhost:3012/api/auth"
     echo "BFF:        http://localhost:3010/bff"
     echo "Backend:    http://localhost:3011"
