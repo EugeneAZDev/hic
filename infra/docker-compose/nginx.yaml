@@ -19,8 +19,8 @@ services:
       - DOMAIN=${DOMAIN:-localhost}
     volumes:
       - ../nginx/conf:/etc/nginx/conf.d
-      - ../nginx/ssl:/etc/letsencrypt
-      - ../nginx/cert:/var/www/cert
+      - /opt/hic/infra/nginx/ssl:/etc/letsencrypt
+      - /opt/hic/infra/nginx/cert:/var/www/cert
     networks:
       - hicnet
     depends_on:
