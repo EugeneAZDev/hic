@@ -175,6 +175,48 @@ jobs:
           echo "Verifying nginx image..."
           docker inspect ${REGISTRY_URL}/nginx:staging-latest | grep -E "(WorkingDir|Entrypoint|Cmd)" || echo "Nginx image verification failed"
           
+          # Initialize databases
+          echo "Initializing databases..."
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         up -d db auth-db
+          
+          # Wait for databases to be ready
+          echo "Waiting for databases to be ready..."
+          sleep 30
+          
+          # Install database extensions
+          echo "Installing database extensions..."
+          docker exec hic-db-basic psql -U ${DB_USER} -d ${DB_NAME} -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-auth-db-basic psql -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME} -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          
+          # Run Prisma migrations (idempotent)
+          echo "Running Prisma migrations..."
+          pnpm install
+          
+          # Check if migrations are needed
+          echo "Checking migration status..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma migrate status || echo "Main DB migration status check failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma migrate status || echo "Auth DB migration status check failed"
+          
+          # Apply migrations (only new ones)
+          echo "Applying migrations..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma migrate deploy || echo "Main DB migration failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma migrate deploy || echo "Auth DB migration failed"
+          
+          # Generate clients (idempotent)
+          echo "Generating Prisma clients..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma generate || echo "Main DB client generation failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma generate || echo "Auth DB client generation failed"
+          
           # Deploy services
           docker compose -f infra/docker-compose/base.yaml \
                          -f infra/docker-compose/staging.yaml \
