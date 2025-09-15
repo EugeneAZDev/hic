@@ -138,6 +138,9 @@ jobs:
           export REGISTRY_URL=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
           export VERSION=staging-latest
           
+          # Install pnpm
+          npm install -g pnpm@8
+          
           # Create staging env file from variables and secrets
           echo "Creating .env file with staging variables..."
           cat > /opt/actions-runner/_work/hic/hic/.env << EOF
@@ -189,8 +192,8 @@ jobs:
           
           # Install database extensions
           echo "Installing database extensions..."
-          docker exec hic-db-basic psql -U ${DB_USER} -d ${DB_NAME} -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
-          docker exec hic-auth-db-basic psql -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME} -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-db-basic psql -U "${DB_USER}" -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-auth-db-basic psql -U "${AUTH_DB_USER}" -d "${AUTH_DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
           
           # Run Prisma migrations (idempotent)
           echo "Running Prisma migrations..."
