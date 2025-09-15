@@ -35,8 +35,8 @@ jobs:
 
       - name: Build applications
         run: |
-          export NEXT_PUBLIC_BFF_URL=http://localhost:3015/bff
-          export NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3014/api/auth
+          export NEXT_PUBLIC_BFF_URL=http://localhost:3010/bff
+          export NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3012/api/auth
           pnpm build
 
       - name: Set up Docker Buildx
@@ -132,14 +132,20 @@ jobs:
           echo "Checking if ports are free:"
           sudo ss -tlnp | grep -E "(80|443|5001|3013|3014|3015|3001)" || echo "All ports are free"
 
+      - name: Install Node.js and pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@8
+
       - name: Deploy to staging
         run: |
           # Set environment variables for staging
           export REGISTRY_URL=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
           export VERSION=staging-latest
-          
-          # Install pnpm
-          npm install -g pnpm@8
           
           # Create staging env file from variables and secrets
           echo "Creating .env file with staging variables..."
