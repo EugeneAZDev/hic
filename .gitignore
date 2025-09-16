@@ -1,4 +1,5 @@
 # Node.js
+bin/
 node_modules/
 public/
 dist/
@@ -8,8 +9,10 @@ out/
 .nuxt/
 tmp/
 temp/
+logs/
 coverage/
 *.tsbuildinfo
+.pnpm-store/
 
 # Logs
 *.log
