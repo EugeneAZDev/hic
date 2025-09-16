@@ -52,8 +52,18 @@ jobs:
       - name: Set lowercase repository name
         run: |
           echo "REPO_OWNER_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "REPO_NAME_LOWER=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "IMAGE_PREFIX=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REPO_NAME_LOWER=$(echo '${{ github.event.repository.name }}' | \
+            tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build shared base image
+        uses: docker/bake-action@v5
+        with:
+          push: true
+          files: ./docker-bake.hcl
+          targets: shared
+          set: |
+            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/shared:staging-latest
+            *.args.NODE_ENV=production
 
       - name: Build & push staging images
         uses: docker/bake-action@v5
@@ -132,14 +142,16 @@ jobs:
           echo "Checking if ports are free:"
           sudo ss -tlnp | grep -E "(80|443|5001|3013|3014|3015|3001)" || echo "All ports are free"
 
-      - name: Install Node.js and pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm@8
+          cache: 'pnpm'
 
       - name: Deploy to staging
         run: |
@@ -182,7 +194,8 @@ jobs:
           
           # Verify nginx image is correct
           echo "Verifying nginx image..."
-          docker inspect ${REGISTRY_URL}/nginx:staging-latest | grep -E "(WorkingDir|Entrypoint|Cmd)" || echo "Nginx image verification failed"
+          docker inspect ${REGISTRY_URL}/nginx:staging-latest | \
+            grep -E "(WorkingDir|Entrypoint|Cmd)" || echo "Nginx image verification failed"
           
           # Initialize databases
           echo "Initializing databases..."
@@ -198,8 +211,10 @@ jobs:
           
           # Install database extensions
           echo "Installing database extensions..."
-          docker exec hic-db-basic psql -U "${DB_USER}" -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
-          docker exec hic-auth-db-basic psql -U "${AUTH_DB_USER}" -d "${AUTH_DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-db-basic psql -U "${DB_USER}" -d "${DB_NAME}" \
+            -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-auth-db-basic psql -U "${AUTH_DB_USER}" -d "${AUTH_DB_NAME}" \
+            -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
           
           # Run Prisma migrations (idempotent)
           echo "Running Prisma migrations..."
@@ -253,7 +268,3 @@ jobs:
           
           echo "Checking nginx logs..."
           docker logs hic-nginx-staging --tail 20
-
-
-
-
