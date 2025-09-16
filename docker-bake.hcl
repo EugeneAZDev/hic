@@ -2,6 +2,18 @@ group "default" {
   targets = ["frontend", "backend", "bff", "auth-service", "worker-service", "nginx"]
 }
 
+# Shared base with all dependencies and builds
+target "shared" {
+  context = "."
+  dockerfile = "Dockerfile.shared"
+  tags = [
+    "ghcr.io/eugeneazdev/hic/shared:staging-latest"
+  ]
+  args = {
+    NODE_ENV = "production"
+  }
+}
+
 target "frontend" {
   context = "."
   dockerfile = "apps/frontend/Dockerfile"
@@ -11,6 +23,8 @@ target "frontend" {
   args = {
     NODE_ENV = "production"
   }
+  # depends_on only for production builds where shared image is pushed to registry
+  depends_on = ["shared"]
 }
 
 target "backend" {
@@ -22,6 +36,7 @@ target "backend" {
   args = {
     NODE_ENV = "production"
   }
+  depends_on = ["shared"]
 }
 
 target "bff" {
@@ -33,6 +48,7 @@ target "bff" {
   args = {
     NODE_ENV = "production"
   }
+  depends_on = ["shared"]
 }
 
 target "auth-service" {
@@ -44,6 +60,7 @@ target "auth-service" {
   args = {
     NODE_ENV = "production"
   }
+  depends_on = ["shared"]
 }
 
 target "worker-service" {
@@ -55,6 +72,7 @@ target "worker-service" {
   args = {
     NODE_ENV = "production"
   }
+  depends_on = ["shared"]
 }
 
 target "nginx" {
