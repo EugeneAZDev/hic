@@ -1,0 +1,11 @@
+# Use shared base image with all dependencies and builds
+FROM ghcr.io/eugeneazdev/hic/shared:local-latest AS base
+
+# Expose port
+EXPOSE 3010
+
+# Set working directory
+WORKDIR /app/apps/bff
+
+# Start the application
+CMD ["node", "dist/main"]
