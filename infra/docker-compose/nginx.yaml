@@ -18,7 +18,6 @@ services:
       - SSL_ENABLED=${SSL_ENABLED:-false}
       - DOMAIN=${DOMAIN:-localhost}
     volumes:
-      - ../nginx/conf:/etc/nginx/conf.d
       - ../nginx/ssl:/etc/letsencrypt
       - ../nginx/cert:/var/www/cert
     networks:
