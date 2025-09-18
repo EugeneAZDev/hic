@@ -65,17 +65,26 @@ jobs:
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/shared:staging-latest
             *.args.NODE_ENV=production
 
-      - name: Build & push staging images
+      - name: Build & push application images
         uses: docker/bake-action@v5
         with:
           push: true
           files: ./docker-bake.hcl
+          targets: frontend,backend,bff,auth-service,worker-service
           set: |
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
+
+      - name: Build & push nginx image
+        uses: docker/bake-action@v5
+        with:
+          push: true
+          files: ./docker-bake.hcl
+          targets: nginx
+          set: |
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
         env:
           # Provide dummy values for build-time variables
