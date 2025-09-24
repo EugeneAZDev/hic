@@ -1,0 +1,329 @@
+name: Local Staging Test
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Ensure pnpm exists
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.6.12 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: |
+          # Use cached pnpm store if available
+          if [ -d "/tmp/.pnpm" ]; then
+            echo "Using cached pnpm store"
+            pnpm install --frozen-lockfile --prefer-offline
+          else
+            echo "No cache found, installing fresh"
+            pnpm install --frozen-lockfile
+          fi
+        env:
+          # Enable pnpm cache for act
+          PNPM_CACHE_FOLDER: /tmp/.pnpm
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Build applications
+        run: |
+          export NEXT_PUBLIC_BFF_URL=http://localhost:3010/bff
+          export NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3012/api/auth
+          pnpm build
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set repository names (hardcoded for local testing)
+        run: |
+          echo "REPO_OWNER_LOWER=eugeneazdev" >> $GITHUB_ENV
+          echo "REPO_NAME_LOWER=hic" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX=${{ env.REGISTRY }}/eugeneazdev/hic" >> $GITHUB_ENV
+
+      - name: Prepare local Dockerfiles
+        run: |
+          # Create local versions of Dockerfiles
+          for dockerfile in $(find apps -name "Dockerfile" -type f); do
+            local_file="${dockerfile}.local"
+            OLD_IMAGE="FROM ghcr.io/eugeneazdev/hic/shared:staging-latest"
+            NEW_IMAGE="FROM ghcr.io/eugeneazdev/hic/shared:local-latest"
+            sed "s|${OLD_IMAGE}|${NEW_IMAGE}|" "$dockerfile" > "$local_file"
+            echo "Created $local_file"
+          done
+
+      - name: Build shared base image
+        run: |
+          docker build -f Dockerfile.shared \
+            --tag ghcr.io/eugeneazdev/hic/shared:local-latest \
+            --build-arg NODE_ENV=production \
+            --build-arg NEXT_PUBLIC_BFF_URL=https://hic-staging.gtechdev.top/bff \
+            --build-arg NEXT_PUBLIC_AUTH_SERVICE_URL=https://hic-staging.gtechdev.top/bff/auth \
+            --build-arg FRONTEND_URL=https://hic-staging.gtechdev.top \
+            .
+
+      - name: Build services with local shared
+        run: |
+          # Build frontend
+          docker build -f apps/frontend/Dockerfile.local \
+            --tag ghcr.io/eugeneazdev/hic/frontend:staging-latest \
+            --build-arg NODE_ENV=production \
+            .
+          
+          # Build backend
+          docker build -f apps/backend/Dockerfile.local \
+            --tag ghcr.io/eugeneazdev/hic/backend:staging-latest \
+            --build-arg NODE_ENV=production \
+            .
+          
+          # Build bff
+          docker build -f apps/bff/Dockerfile.local \
+            --tag ghcr.io/eugeneazdev/hic/bff:staging-latest \
+            --build-arg NODE_ENV=production \
+            .
+          
+          # Build auth-service
+          docker build -f apps/auth-service/Dockerfile.local \
+            --tag ghcr.io/eugeneazdev/hic/auth-service:staging-latest \
+            --build-arg NODE_ENV=production \
+            .
+          
+          # Build worker-service
+          docker build -f apps/worker-service/Dockerfile.local \
+            --tag ghcr.io/eugeneazdev/hic/worker-service:staging-latest \
+            --build-arg NODE_ENV=production \
+            .
+          
+          # Build nginx
+          docker build -f infra/nginx/Dockerfile \
+            --tag ghcr.io/eugeneazdev/hic/nginx:staging-latest \
+            --build-arg NODE_ENV=production \
+            infra/nginx/
+        env:
+          # Provide dummy values for build-time variables
+          JWT_SECRET: "dummy-build-secret"
+          DB_USER: "dummy"
+          DB_PASSWORD: "dummy"
+          DB_NAME: "dummy"
+          AUTH_DB_USER: "dummy"
+          AUTH_DB_PASSWORD: "dummy"
+          AUTH_DB_NAME: "dummy"
+          FRONTEND_URL: "https://hic-staging.gtechdev.top"
+          NEXT_PUBLIC_BFF_URL: "https://hic-staging.gtechdev.top/bff"
+          NEXT_PUBLIC_AUTH_SERVICE_URL: "https://hic-staging.gtechdev.top/bff/auth"
+          DOMAIN: "hic-staging.gtechdev.top"
+          SSL_ENABLED: "true"
+          REGISTRY_URL: "ghcr.io/dummy"
+          VERSION: "staging-latest"
+
+  deploy:
+    needs: build-push
+    runs-on: [self-hosted, staging, production]
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up before deploy
+        run: |
+          # Clean up build artifacts
+          rm -rf .turbo || true
+          rm -rf node_modules/.cache || true
+          
+          # Stop and remove existing containers
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         down --remove-orphans || true
+          
+          # Stop system web servers that might be using port 80
+          sudo systemctl stop nginx || true
+          sudo systemctl stop apache2 || true
+          sudo systemctl stop httpd || true
+          
+          RUNNER_USER="runner"
+
+          for port in 80 443 5001 3013 3014 3015 3001; do
+            sudo lsof -ti:$port -sTCP:LISTEN 2>/dev/null | while read -r pid; do
+              user=$(ps -o user= -p "$pid" 2>/dev/null || true)
+              if [[ -n $pid && $user != "$RUNNER_USER" ]]; then
+                echo "Killing $pid (user=$user) on port $port"
+                sudo kill -9 "$pid" 2>/dev/null || true
+              fi
+            done
+          done
+          
+          # Remove only staging nginx containers
+          docker rm -f $(docker ps -aq --filter "name=hic-nginx-staging") || true
+          
+          # Clean up only unused Docker resources
+          docker system prune -f
+          
+          # Wait a moment for ports to be released
+          sleep 10
+          
+          # Verify ports are free
+          echo "Checking if ports are free:"
+          sudo ss -tlnp | grep -E "(80|443|5001|3013|3014|3015|3001)" || echo "All ports are free"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Ensure pnpm exists
+        run: |
+          corepack enable
+          corepack prepare pnpm@8.6.12 --activate
+          pnpm --version
+
+      - name: Deploy to staging
+        run: |
+          # Set environment variables for staging
+          export REGISTRY_URL=${{ env.REGISTRY }}/eugeneazdev/hic
+          export VERSION=staging-latest
+          
+          # Create staging env file from variables and secrets
+          echo "Creating .env file with staging variables..."
+          cat > /opt/actions-runner/_work/hic/hic/.env << EOF
+          APP_ENV=staging
+          REGISTRY_URL=ghcr.io/eugeneazdev/hic
+          VERSION=staging-latest
+          DB_NAME=hic_staging
+          DB_USER=hic_user
+          DB_PASSWORD=dummy_password
+          AUTH_DB_NAME=hic_auth_staging
+          AUTH_DB_USER=hic_auth_user
+          AUTH_DB_PASSWORD=dummy_auth_password
+          JWT_SECRET=dummy_jwt_secret_for_staging
+          FRONTEND_URL=https://hic-staging.gtechdev.top
+          NEXT_PUBLIC_BFF_URL=https://hic-staging.gtechdev.top/bff
+          NEXT_PUBLIC_AUTH_SERVICE_URL=https://hic-staging.gtechdev.top/bff/auth
+          DOMAIN=hic-staging.gtechdev.top
+          SSL_ENABLED=true
+          NGINX_HTTP_PORT=80
+          NGINX_HTTPS_PORT=443
+          EOF
+          
+          # Debug: Show .env file content (without secrets)
+          echo "Created .env file:"
+          cat /opt/actions-runner/_work/hic/hic/.env | sed 's/PASSWORD=.*/PASSWORD=***/' | sed 's/SECRET=.*/SECRET=***/'
+          
+          # Pull latest images (including nginx from registry)
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         pull
+          
+          # Verify nginx image is correct
+          echo "Verifying nginx image..."
+          docker inspect ${REGISTRY_URL}/nginx:staging-latest | \
+            grep -E "(WorkingDir|Entrypoint|Cmd)" || echo "Nginx image verification failed"
+          
+          # Initialize databases
+          echo "Initializing databases..."
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         up -d db auth-db
+          
+          # Wait for databases to be ready
+          echo "Waiting for databases to be ready..."
+          sleep 30
+          
+          # Install database extensions
+          echo "Installing database extensions..."
+          docker exec hic-db-basic psql -U "${DB_USER}" -d "${DB_NAME}" \
+            -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          docker exec hic-auth-db-basic psql -U "${AUTH_DB_USER}" -d "${AUTH_DB_NAME}" \
+            -c "CREATE EXTENSION IF NOT EXISTS \"citext\"; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+          
+          # Run Prisma migrations (idempotent)
+          echo "Running Prisma migrations..."
+          pnpm install
+          
+          # Check if migrations are needed
+          echo "Checking migration status..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma migrate status || echo "Main DB migration status check failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma migrate status || echo "Auth DB migration status check failed"
+          
+          # Apply migrations (only new ones)
+          echo "Applying migrations..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma migrate deploy || echo "Main DB migration failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma migrate deploy || echo "Auth DB migration failed"
+          
+          # Generate clients (idempotent)
+          echo "Generating Prisma clients..."
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5435/${DB_NAME}" \
+            pnpm --filter ./packages/prisma/main prisma generate || echo "Main DB client generation failed"
+          AUTH_DATABASE_URL="postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@localhost:5437/${AUTH_DB_NAME}" \
+            pnpm --filter ./packages/prisma/auth prisma generate || echo "Auth DB client generation failed"
+          
+          # Deploy services
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         up -d --remove-orphans
+
+      - name: Health check
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          
+          # Check if services are running
+          docker compose -f infra/docker-compose/base.yaml \
+                         -f infra/docker-compose/staging.yaml \
+                         -f infra/docker-compose/nginx.yaml \
+                         --env-file .env \
+                         --profile staging \
+                         ps
+          
+          # Check nginx configuration and logs
+          echo "Checking nginx configuration..."
+          docker exec hic-nginx-staging nginx -t || echo "Nginx configuration test failed"
+          
+          echo "Checking nginx logs..."
+          docker logs hic-nginx-staging --tail 20

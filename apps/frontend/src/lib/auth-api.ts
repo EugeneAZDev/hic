@@ -2,7 +2,7 @@ import { Login, Register, AuthResponse, TokenResponse } from '@hic/shared-dto';
 import { AuthResponseSchema, TokenResponseSchema } from '@hic/shared-schemas';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080/bff';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BFF_URL;
 
 class AuthApiError extends Error {
   constructor(

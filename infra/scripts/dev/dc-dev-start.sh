@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-
+export CI=true
 echo "Starting development environment..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +32,13 @@ echo "Building frontend with environment variables..."
 echo "NEXT_PUBLIC_BFF_URL: $NEXT_PUBLIC_BFF_URL"
 echo "NEXT_PUBLIC_AUTH_SERVICE_URL: $NEXT_PUBLIC_AUTH_SERVICE_URL"
 cd "$PROJECT_ROOT"
-pnpm install
+
+# pnpm install --yes
+# or
+# pnpm install --prefer-offline --frozen-lockfile
+pnpm install --prefer-offline --frozen-lockfile
+# ===============================================
+
 pnpm build --filter ./apps/frontend
 echo "Frontend build completed"
 

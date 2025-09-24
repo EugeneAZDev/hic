@@ -1,0 +1,87 @@
+# ===========================
+# 1. Base stage with all deps
+# ===========================
+FROM node:18-alpine AS base
+
+# Install OpenSSL (for Prisma) and pnpm
+RUN apk add --no-cache openssl && \
+    ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 && \
+    ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1
+
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+# Copy root package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+
+# Copy all packages and apps (needed for dependency resolution)
+COPY packages/ ./packages/
+COPY apps/ ./apps/
+
+# Install all dependencies (dev included) for build
+RUN pnpm install --frozen-lockfile
+
+# 2. Builder stage
+FROM base AS builder
+
+# Set build-time environment variables for Next.js
+ARG NEXT_PUBLIC_BFF_URL
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL
+ARG FRONTEND_URL
+
+# Export as environment variables for the build process
+ENV NEXT_PUBLIC_BFF_URL=$NEXT_PUBLIC_BFF_URL
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
+ENV FRONTEND_URL=$FRONTEND_URL
+
+# Debug: Show environment variables
+RUN echo "NEXT_PUBLIC_BFF_URL: $NEXT_PUBLIC_BFF_URL"
+RUN echo "NEXT_PUBLIC_AUTH_SERVICE_URL: $NEXT_PUBLIC_AUTH_SERVICE_URL"
+RUN echo "FRONTEND_URL: $FRONTEND_URL"
+
+# Build all apps (turbo или pnpm build)
+RUN pnpm build
+
+# 3. Production deps stage
+FROM base AS deps
+
+# Keep all dependencies (including dev) for shared packages that need TypeScript
+# The individual service Dockerfiles will handle production-only deps
+RUN pnpm install --frozen-lockfile
+
+# 4. Final production image
+FROM node:18-alpine AS production
+
+# Install OpenSSL again for runtime
+RUN apk add --no-cache openssl && \
+    ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 && \
+    ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1
+
+RUN npm install -g pnpm
+
+# Copy environment variables from builder stage
+ARG NEXT_PUBLIC_BFF_URL
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL
+ARG FRONTEND_URL
+
+ENV NEXT_PUBLIC_BFF_URL=$NEXT_PUBLIC_BFF_URL
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
+ENV FRONTEND_URL=$FRONTEND_URL
+
+WORKDIR /app
+
+# Copy production node_modules and packages
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
+
+# Copy built apps
+COPY --from=builder /app/apps ./apps
+
+# Copy workspace metadata (optional, но может пригодиться)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+ENV NODE_ENV=production
+
+# Default command (переопределяется в конкретных Dockerfile)
+CMD ["node", "--version"]

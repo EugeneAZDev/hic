@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# If something is wrong, run `pnpm build` before running this script
 set -e
 
 echo "Starting development environment..."

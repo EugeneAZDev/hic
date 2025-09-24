@@ -4,7 +4,8 @@ include:
 services:
   nginx:
     container_name: hic-nginx-${APP_ENV:-dev}
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/nginx:${VERSION:-staging-latest}
+    image: ${NGINX_IMAGE:-${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/nginx:${VERSION:-staging-latest}}
+    pull_policy: ${NGINX_PULL_POLICY:-always}
     restart: unless-stopped
     profiles:
       - dev
@@ -18,9 +19,8 @@ services:
       - SSL_ENABLED=${SSL_ENABLED:-false}
       - DOMAIN=${DOMAIN:-localhost}
     volumes:
-      - ../nginx/conf:/etc/nginx/conf.d
-      - ../nginx/ssl:/etc/letsencrypt
-      - ../nginx/cert:/var/www/cert
+      - /opt/hic/infra/nginx/ssl:/etc/letsencrypt
+      - /opt/hic/infra/nginx/cert:/var/www/cert
     networks:
       - hicnet
     depends_on:
