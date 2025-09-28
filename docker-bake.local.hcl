@@ -7,75 +7,71 @@ target "shared" {
   context = "."
   dockerfile = "Dockerfile.shared"
   tags = [
-    "ghcr.io/eugeneazdev/hic/shared:staging-latest"
+    "ghcr.io/eugeneazdev/hic/shared:local-latest"
   ]
   args = {
     NODE_ENV = "production"
-    NEXT_PUBLIC_BFF_URL = ""
-    NEXT_PUBLIC_AUTH_SERVICE_URL = ""
-    FRONTEND_URL = ""
   }
 }
 
 target "frontend" {
   context = "."
-  dockerfile = "apps/frontend/Dockerfile"
+  dockerfile = "apps/frontend/Dockerfile.local"
   tags = [
     "ghcr.io/eugeneazdev/hic/frontend:staging-latest"
   ]
   args = {
     NODE_ENV = "production"
   }
-  # depends_on only for production builds where shared image is pushed to registry
-  depends_on = ["shared"]
+  # No depends_on for local testing
 }
 
 target "backend" {
   context = "."
-  dockerfile = "apps/backend/Dockerfile"
+  dockerfile = "apps/backend/Dockerfile.local"
   tags = [
     "ghcr.io/eugeneazdev/hic/backend:staging-latest"
   ]
   args = {
     NODE_ENV = "production"
   }
-  depends_on = ["shared"]
+  # No depends_on for local testing
 }
 
 target "bff" {
   context = "."
-  dockerfile = "apps/bff/Dockerfile"
+  dockerfile = "apps/bff/Dockerfile.local"
   tags = [
     "ghcr.io/eugeneazdev/hic/bff:staging-latest"
   ]
   args = {
     NODE_ENV = "production"
   }
-  depends_on = ["shared"]
+  # No depends_on for local testing
 }
 
 target "auth-service" {
   context = "."
-  dockerfile = "apps/auth-service/Dockerfile"
+  dockerfile = "apps/auth-service/Dockerfile.local"
   tags = [
     "ghcr.io/eugeneazdev/hic/auth-service:staging-latest"
   ]
   args = {
     NODE_ENV = "production"
   }
-  depends_on = ["shared"]
+  # No depends_on for local testing
 }
 
 target "worker-service" {
   context = "."
-  dockerfile = "apps/worker-service/Dockerfile"
+  dockerfile = "apps/worker-service/Dockerfile.local"
   tags = [
     "ghcr.io/eugeneazdev/hic/worker-service:staging-latest"
   ]
   args = {
     NODE_ENV = "production"
   }
-  depends_on = ["shared"]
+  # No depends_on for local testing
 }
 
 target "nginx" {
@@ -85,7 +81,3 @@ target "nginx" {
     "ghcr.io/eugeneazdev/hic/nginx:staging-latest"
   ]
 }
-
-
-
-

@@ -1,0 +1,39 @@
+# Local development - build from source
+FROM node:18-alpine AS base
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl && \
+    ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 && \
+    ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/auth-service/package.json ./apps/auth-service/
+COPY packages/ ./packages/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY apps/auth-service/ ./apps/auth-service/
+COPY packages/ ./packages/
+
+# Build the application
+WORKDIR /app/apps/auth-service
+RUN pnpm build
+
+# Expose port
+EXPOSE 3012
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV AUTH_PORT=3012
+
+# Start the application
+CMD ["node", "dist/main"]

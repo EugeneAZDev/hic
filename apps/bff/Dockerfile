@@ -1,26 +1,26 @@
-FROM node:18-alpine AS base
-WORKDIR /app
+# Use shared base image as builder
+FROM ghcr.io/eugeneazdev/hic/shared:staging-latest AS builder
 
-FROM base AS runner
+# Final runtime image
+FROM node:18-alpine AS runtime
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Expose port
 EXPOSE 3010
 
-USER root
-RUN npm install -g pnpm@8
+# Set working directory
+WORKDIR /app
 
-# Copy built application files
-COPY --chown=node:node apps/bff/dist apps/bff/dist
-COPY --chown=node:node apps/bff/package.json apps/bff/package.json
-COPY --chown=node:node packages/shared/schemas packages/shared/schemas
-COPY --chown=node:node packages/shared/dto packages/shared/dto
-COPY --chown=node:node pnpm-lock.yaml pnpm-lock.yaml
-COPY --chown=node:node pnpm-workspace.yaml pnpm-workspace.yaml
+# Copy only the built bff from shared image
+COPY --from=builder /app/apps/bff/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-RUN chown -R node:node /app
+# Override the root package.json with bff's package.json
+COPY --from=builder /app/apps/bff/package.json ./package.json
 
-USER node
-
-RUN pnpm install --prod --frozen-lockfile --filter ./apps/bff
-
-WORKDIR /app/apps/bff
-
-CMD ["pnpm", "start"]
+# Start the application
+CMD ["node", "dist/main"]

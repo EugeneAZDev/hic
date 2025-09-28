@@ -1,7 +1,7 @@
 import { LoginSchema, RegisterSchema, AuthResponseSchema } from '@hic/shared-schemas';
 import { z } from 'zod';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080/bff';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BFF_URL;
 
 // Types generated from Zod schemas
 export type LoginData = z.infer<typeof LoginSchema>;

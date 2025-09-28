@@ -1,0 +1,21 @@
+# Use shared base image with all dependencies and builds
+FROM ghcr.io/eugeneazdev/hic/shared:local-latest AS base
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Set ownership
+RUN chown -R nextjs:nodejs /app
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Set working directory
+WORKDIR /app/apps/frontend
+
+# Start the application
+CMD ["pnpm", "start"]

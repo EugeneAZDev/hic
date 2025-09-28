@@ -7,7 +7,7 @@ name: hic_staging
 services:
   backend:
     container_name: hic-backend-staging
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/backend:${VERSION:-staging-latest}
+    image: ${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/backend:${VERSION:-staging-latest}
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
@@ -26,9 +26,10 @@ services:
 
   auth-service:
     container_name: hic-auth-service-staging
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/auth-service:${VERSION:-staging-latest}
+    image: ${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/auth-service:${VERSION:-staging-latest}
     environment:
       NODE_ENV: production
+      AUTH_PORT: 3012
       AUTH_DATABASE_URL: postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}
       JWT_SECRET: ${JWT_SECRET:?err}
       REDIS_HOST: ${REDIS_HOST:-redis}
@@ -48,7 +49,7 @@ services:
 
   worker-service:
     container_name: hic-worker-service-staging
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/worker-service:${VERSION:-staging-latest}
+    image: ${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/worker-service:${VERSION:-staging-latest}
     environment:
       NODE_ENV: production
       WORKER_SERVICE_PORT: 5000
@@ -72,7 +73,7 @@ services:
 
   bff:
     container_name: hic-bff-staging
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/bff:${VERSION:-staging-latest}
+    image: ${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/bff:${VERSION:-staging-latest}
     environment:
       NODE_ENV: production
       BFF_PORT: ${BFF_PORT:-3010}
@@ -93,10 +94,11 @@ services:
 
   frontend:
     container_name: hic-frontend-staging
-    image: ${REGISTRY_URL:-ghcr.io/your-org/your-repo}/frontend:${VERSION:-staging-latest}
+    image: ${REGISTRY_URL:-ghcr.io/eugeneazdev/hic}/frontend:${VERSION:-staging-latest}
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_BFF_URL: ${NEXT_PUBLIC_BFF_URL:-http://localhost:3015/bff}
+      NEXT_PUBLIC_BFF_URL: ${NEXT_PUBLIC_BFF_URL:-https://hic-staging.gtechdev.top/bff}
+      NEXT_PUBLIC_AUTH_SERVICE_URL: ${NEXT_PUBLIC_AUTH_SERVICE_URL:-https://hic-staging.gtechdev.top/bff/auth}
     ports:
       - "3001:3000"
     volumes:

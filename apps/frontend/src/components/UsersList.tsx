@@ -14,7 +14,7 @@ export function UsersList() {
     const fetchUsers = async () => {
       try {
         // Always use BFF - it's the correct architecture
-        const apiUrl = `${process.env.NEXT_PUBLIC_BFF_URL || 'http://localhost:8080/bff'}/users`;
+        const apiUrl = `${process.env.NEXT_PUBLIC_BFF_URL}/users`;
         
         const response = await fetch(apiUrl);
         if (!response.ok) {

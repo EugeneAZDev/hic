@@ -1,30 +1,29 @@
-FROM node:18-alpine AS base
-WORKDIR /app
+# Use shared base image as builder
+FROM ghcr.io/eugeneazdev/hic/shared:staging-latest AS builder
 
-FROM base AS runner
-EXPOSE 3011
+# Final runtime image
+FROM node:18-alpine AS runtime
 
-USER root
-RUN npm install -g pnpm@8
-RUN apk add --no-cache openssl && \
+# Install pnpm and OpenSSL for Prisma
+RUN npm install -g pnpm && \
+    apk add --no-cache openssl && \
     ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 && \
     ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1
 
-# Copy built application files
-COPY --chown=node:node apps/backend/dist apps/backend/dist
-COPY --chown=node:node apps/backend/package.json apps/backend/package.json
-COPY --chown=node:node packages/shared/schemas packages/shared/schemas
-COPY --chown=node:node packages/shared/dto packages/shared/dto
-COPY --chown=node:node packages/prisma/generated/main packages/prisma/generated/main
-COPY --chown=node:node pnpm-lock.yaml pnpm-lock.yaml
-COPY --chown=node:node pnpm-workspace.yaml pnpm-workspace.yaml
+# Expose port
+EXPOSE 3011
 
-RUN chown -R node:node /app
+# Set working directory
+WORKDIR /app
 
-USER node
+# Copy only the built backend from shared image
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-RUN pnpm install --prod --frozen-lockfile --filter ./apps/backend
+# Override the root package.json with backend's package.json
+COPY --from=builder /app/apps/backend/package.json ./package.json
 
-WORKDIR /app/apps/backend
-
-CMD ["pnpm", "start"]
+# Start the application
+CMD ["node", "dist/main"]
