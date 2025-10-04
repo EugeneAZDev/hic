@@ -87,6 +87,10 @@ COPY --from=deps /app/packages ./packages
 # Overwrite only the generated folder with fresh files from builder
 COPY --from=builder /app/packages/prisma/generated ./packages/prisma/generated
 
+# Create missing structure for runtime imports
+RUN mkdir -p ./dist/packages/prisma
+COPY --from=builder /app/packages/prisma/generated ./dist/packages/prisma/generated
+
 # Copy workspace metadata
 COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
