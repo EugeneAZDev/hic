@@ -20,6 +20,9 @@ WORKDIR /app
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
+
+# Copy dist/packages with Prisma generated clients
+COPY --from=builder /app/dist/packages ./dist/packages
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
