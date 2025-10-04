@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { FloatingElement } from './FloatingElement';
@@ -18,10 +19,10 @@ export function AuthPage() {
             <h1 className="text-2xl font-bold text-gray-800">Humor Image Collection</h1>
           </div>
           <nav className="hidden md:flex space-x-6">
-            <a href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">Home</a>
-            <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">Gallery</a>
-            <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">About</a>
-            <a href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">Contact</a>
+            <Link href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">Home</Link>
+            <Link href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">Gallery</Link>
+            <Link href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">About</Link>
+            <Link href="#" className="text-gray-600 hover:text-indigo-600 transition-colors">Contact</Link>
           </nav>
           <button className="md:hidden text-gray-600 hover:text-indigo-600 transition-colors">
             <i className="fas fa-bars text-2xl"></i>
@@ -95,18 +96,18 @@ export function AuthPage() {
               <span className="text-lg font-semibold text-gray-800">Humor Image Collection</span>
             </div>
             <div className="flex space-x-6">
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              <Link href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
                 <i className="fab fa-twitter"></i>
-              </a>
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              </Link>
+              <Link href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
                 <i className="fab fa-instagram"></i>
-              </a>
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              </Link>
+              <Link href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
                 <i className="fab fa-facebook"></i>
-              </a>
-              <a href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
+              </Link>
+              <Link href="#" className="text-gray-500 hover:text-indigo-600 transition-colors">
                 <i className="fab fa-pinterest"></i>
-              </a>
+              </Link>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">

@@ -38,6 +38,7 @@ services:
     image: ${REGISTRY_URL:-localhost:5007}/auth-service:${VERSION:-dev}
     environment:
       NODE_ENV: production
+      AUTH_PORT: 3012
       AUTH_DATABASE_URL: postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-db:5432/${AUTH_DB_NAME}
       JWT_SECRET: ${JWT_SECRET:?err}
       REDIS_HOST: ${REDIS_HOST:-redis}

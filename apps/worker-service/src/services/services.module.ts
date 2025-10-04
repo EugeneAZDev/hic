@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
-import { EmailService } from './email.service';
-import { BackendService } from './backend.service';
-import { JobHistoryService } from './job-history.service';
+import { Module } from "@nestjs/common";
+import { HttpModule } from "@nestjs/axios";
+import { EmailService } from "./email.service";
+import { BackendService } from "./backend.service";
+import { JobHistoryService } from "./job-history.service";
 
 @Module({
   imports: [HttpModule],

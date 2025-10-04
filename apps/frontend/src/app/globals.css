@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font Awesome */
+@import url('/fontawesome/css/all.min.css');
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

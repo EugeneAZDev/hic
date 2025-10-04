@@ -44,6 +44,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+          install: true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -78,7 +81,6 @@ jobs:
       - name: Build shared base image
         uses: docker/bake-action@v5
         with:
-          push: true
           files: ./docker-bake.hcl
           targets: shared
           set: |
@@ -87,29 +89,49 @@ jobs:
             *.args.NEXT_PUBLIC_BFF_URL=${{ env.STAGING_NEXT_PUBLIC_BFF_URL }}
             *.args.NEXT_PUBLIC_AUTH_SERVICE_URL=${{ env.STAGING_NEXT_PUBLIC_AUTH_SERVICE_URL }}
             *.args.FRONTEND_URL=${{ env.STAGING_FRONTEND_URL }}
+            *.output=type=docker
+            *.load=true
 
-      - name: Build & push application images
+      - name: Push shared base image
+        run: |
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/shared:staging-latest
+
+      - name: Build application images
         uses: docker/bake-action@v5
         with:
-          push: true
           files: ./docker-bake.hcl
           targets: frontend,backend,bff,auth-service,worker-service
           set: |
             *.no-cache=true
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
-            *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
+            *.output=type=docker
+            *.load=true
+            frontend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
+            backend.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
+            bff.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
+            auth-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
+            worker-service.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
 
-      - name: Build & push nginx image
+      - name: Push application images
+        run: |
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/frontend:staging-latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/backend:staging-latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/bff:staging-latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/auth-service:staging-latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/worker-service:staging-latest
+
+      - name: Build nginx image
         uses: docker/bake-action@v5
         with:
-          push: true
           files: ./docker-bake.hcl
           targets: nginx
           set: |
             *.tags=ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
+            *.output=type=docker
+            *.load=true
+
+      - name: Push nginx image
+        run: |
+          docker push ghcr.io/${{ env.REPO_OWNER_LOWER }}/${{ env.REPO_NAME_LOWER }}/nginx:staging-latest
         env:
           # Provide dummy values for build-time variables
           JWT_SECRET: "dummy-build-secret"
@@ -135,8 +157,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # - name: Staging server cleanup (specific)
+      #   run: |
+      #     cd /opt/actions-runner/_work/hic/hic
+          
+      #     # Stop staging services
+      #     docker compose -f infra/docker-compose/base.yaml \
+      #                    -f infra/docker-compose/staging.yaml \
+      #                    -f infra/docker-compose/nginx.yaml \
+      #                    --env-file .env \
+      #                    --profile staging down || true
+          
+      #     # Aggressive cleanup
+      #     docker system prune -af && docker volume prune -f && docker builder prune -af
+
       - name: Clean up before deploy
         run: |
+          # Set required environment variables for docker-compose
+          export JWT_SECRET=${{ secrets.STAGING_JWT_SECRET || 'dummy_jwt_secret_for_staging' }}
+          export DB_USER=${{ vars.STAGING_DB_USER || 'hic_user' }}
+          export DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD || 'dummy_password' }}
+          export DB_NAME=${{ vars.STAGING_DB_NAME || 'hic_staging' }}
+          export AUTH_DB_USER=${{ vars.STAGING_AUTH_DB_USER || 'hic_auth_user' }}
+          export AUTH_DB_PASSWORD=${{ secrets.STAGING_AUTH_DB_PASSWORD || 'dummy_auth_password' }}
+          export AUTH_DB_NAME=${{ vars.STAGING_AUTH_DB_NAME || 'hic_auth_staging' }}
+          
           # Clean up build artifacts
           rm -rf .turbo || true
           rm -rf node_modules/.cache || true

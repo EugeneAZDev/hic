@@ -6,6 +6,7 @@ group "default" {
 target "shared" {
   context = "."
   dockerfile = "Dockerfile.shared"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/shared:staging-latest"
   ]
@@ -20,6 +21,7 @@ target "shared" {
 target "frontend" {
   context = "."
   dockerfile = "apps/frontend/Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/frontend:staging-latest"
   ]
@@ -33,6 +35,7 @@ target "frontend" {
 target "backend" {
   context = "."
   dockerfile = "apps/backend/Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/backend:staging-latest"
   ]
@@ -45,6 +48,7 @@ target "backend" {
 target "bff" {
   context = "."
   dockerfile = "apps/bff/Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/bff:staging-latest"
   ]
@@ -57,6 +61,7 @@ target "bff" {
 target "auth-service" {
   context = "."
   dockerfile = "apps/auth-service/Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/auth-service:staging-latest"
   ]
@@ -69,6 +74,7 @@ target "auth-service" {
 target "worker-service" {
   context = "."
   dockerfile = "apps/worker-service/Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/worker-service:staging-latest"
   ]
@@ -81,6 +87,7 @@ target "worker-service" {
 target "nginx" {
   context = "infra/nginx"
   dockerfile = "Dockerfile"
+  platforms = ["linux/amd64"]
   tags = [
     "ghcr.io/eugeneazdev/hic/nginx:staging-latest"
   ]

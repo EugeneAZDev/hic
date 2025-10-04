@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthenticatedOnly, UnauthenticatedOnly } from '../auth/ProtectedRoute';
 
@@ -26,20 +27,20 @@ export function Navbar() {
 
           {/* Navigation Links */}
           <div className="hidden md:flex space-x-6">
-            <a href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">
+            <Link href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">
               Home
-            </a>
+            </Link>
             <AuthenticatedOnly>
-              <a href="/gallery" className="text-gray-600 hover:text-indigo-600 transition-colors">
+              <Link href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">
                 Gallery
-              </a>
-              <a href="/upload" className="text-gray-600 hover:text-indigo-600 transition-colors">
+              </Link>
+              <Link href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">
                 Upload
-              </a>
+              </Link>
             </AuthenticatedOnly>
-            <a href="/about" className="text-gray-600 hover:text-indigo-600 transition-colors">
+            <Link href="/" className="text-gray-600 hover:text-indigo-600 transition-colors">
               About
-            </a>
+            </Link>
           </div>
 
           {/* User Actions */}

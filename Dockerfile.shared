@@ -19,8 +19,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.js
 COPY packages/ ./packages/
 COPY apps/ ./apps/
 
-# Install all dependencies (dev included) for build
-RUN pnpm install --frozen-lockfile
+# Install all dependencies (dev included) for build and all services
+# Use --shamefully-hoist to create flat node_modules structure for Docker
+RUN pnpm install --frozen-lockfile --recursive --shamefully-hoist
 
 # 2. Builder stage
 FROM base AS builder
@@ -40,15 +41,18 @@ RUN echo "NEXT_PUBLIC_BFF_URL: $NEXT_PUBLIC_BFF_URL"
 RUN echo "NEXT_PUBLIC_AUTH_SERVICE_URL: $NEXT_PUBLIC_AUTH_SERVICE_URL"
 RUN echo "FRONTEND_URL: $FRONTEND_URL"
 
-# Build all apps (turbo или pnpm build)
+# Generate Prisma clients
+RUN pnpm --filter @hic/prisma-auth prisma generate
+RUN pnpm --filter @hic/prisma-main prisma generate
+
+# Build all apps
 RUN pnpm build
 
 # 3. Production deps stage
 FROM base AS deps
 
-# Keep all dependencies (including dev) for shared packages that need TypeScript
-# The individual service Dockerfiles will handle production-only deps
-RUN pnpm install --frozen-lockfile
+# All dependencies are already installed in base stage
+# This stage exists for consistency with the original design
 
 # 4. Final production image
 FROM node:18-alpine AS production
@@ -73,15 +77,22 @@ WORKDIR /app
 
 # Copy production node_modules and packages
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy built apps (includes their dist folders)
+COPY --from=builder /app/apps/ ./apps/
+
+# Copy packages (empty for now, without generated)
 COPY --from=deps /app/packages ./packages
 
-# Copy built apps
-COPY --from=builder /app/apps ./apps
+# Overwrite only the generated folder with fresh files from builder
+COPY --from=builder /app/packages/prisma/generated ./packages/prisma/generated
 
-# Copy workspace metadata (optional, но может пригодиться)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copy workspace metadata
+COPY --from=deps /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=deps /app/package.json ./package.json
 
 ENV NODE_ENV=production
 
-# Default command (переопределяется в конкретных Dockerfile)
+# Default command (overridden in specific Dockerfiles)
 CMD ["node", "--version"]

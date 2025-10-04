@@ -33,11 +33,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Font Awesome for icons */}
-        <link 
-          rel="stylesheet" 
-          href="/fontawesome/css/all.min.css"
-        />
         {/* Optimize font loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

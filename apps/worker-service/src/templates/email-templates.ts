@@ -18,7 +18,7 @@ export interface PasswordResetEmailData {
 export class EmailTemplates {
   static welcomeEmail(data: WelcomeEmailData): EmailTemplate {
     return {
-      subject: 'Welcome to HIC Platform!',
+      subject: "Welcome to HIC Platform!",
       html: `
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -74,13 +74,13 @@ If you have any questions, feel free to contact our support team.
 
 Best regards,
 The HIC Team
-      `
+      `,
     };
   }
 
   static passwordResetEmail(data: PasswordResetEmailData): EmailTemplate {
     return {
-      subject: 'Password Reset Request - HIC Platform',
+      subject: "Password Reset Request - HIC Platform",
       html: `
         <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -145,7 +145,7 @@ If you didn't request this password reset, please ignore this email. Your passwo
 
 Best regards,
 The HIC Team
-      `
+      `,
     };
   }
 }

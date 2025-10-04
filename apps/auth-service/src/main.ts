@@ -1,24 +1,27 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { 
-  UserSchema, 
-  CreateUserSchema, 
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from "@nestjs/platform-fastify";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AppModule } from "./app.module";
+import {
+  UserSchema,
+  CreateUserSchema,
   UpdateUserSchema,
   LoginSchema,
   RegisterSchema,
   AuthResponseSchema,
   PaginationSchema,
-  ApiResponseSchema
-} from '@hic/shared-schemas';
-import { generateSchema } from '@anatine/zod-openapi';
+  ApiResponseSchema,
+} from "@hic/shared-schemas";
+import { generateSchema } from "@anatine/zod-openapi";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    new FastifyAdapter(),
   );
 
   // Global validation pipe
@@ -32,8 +35,8 @@ async function bootstrap() {
 
   // CORS configuration
   const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'https://hic-staging.gtechdev.top', // staging domain
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "https://hic-staging.gtechdev.top", // staging domain
   ].filter(Boolean);
 
   app.enableCors({
@@ -61,13 +64,13 @@ async function bootstrap() {
   });
 
   // Global prefix
-  app.setGlobalPrefix('api/auth');
+  app.setGlobalPrefix("api/auth");
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('HIC Auth Service API')
-    .setDescription('Authentication and User Management API for HIC project')
-    .setVersion('1.0')
+    .setTitle("HIC Auth Service API")
+    .setDescription("Authentication and User Management API for HIC project")
+    .setVersion("1.0")
     .addBearerAuth()
     .build();
 
@@ -84,10 +87,10 @@ async function bootstrap() {
     ] as any[],
   });
 
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup("docs", app, document);
 
   const port = process.env.AUTH_PORT || 3012;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port, "0.0.0.0");
   console.log(`Auth Service is running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/docs`);
 }

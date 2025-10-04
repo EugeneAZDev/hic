@@ -3,12 +3,13 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,
+    "baseUrl": ".",
     "paths": {
       "@hic/shared-dto": ["../../packages/shared/dto/src"],
       "@hic/shared-schemas": ["../../packages/shared/schemas/src"],
-      "@hic/shared-security": ["../../packages/shared/security/src"],
-      "@hic/prisma-main": ["../../packages/prisma/generated/main"]
+      "@hic/shared-security": ["../../packages/shared/security/src"]
     }
   },
-  "include": ["src"]
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
 }
